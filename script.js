@@ -45,7 +45,24 @@ const showCity = (input, list) => {
 			return fixItem.includes(input.value.toLowerCase());
 		});
 
-		filterCity.forEach((item) => {
+		const filterCityFirstLetters = filterCity.filter((item) => {
+			return item.name.slice(0, input.value.length) === input.value
+		})
+		console.log('filterCityFirstLetters: ', filterCityFirstLetters);
+
+		filterCityFirstLetters.sort(
+			(a, b) => {
+
+				if (a.name < b.name) {
+					return -1;
+				}
+				if (a.name > b.name) {
+					return 1;
+				}
+				return 0;
+			})
+
+		filterCityFirstLetters.forEach((item) => {
 			const li = document.createElement('li');
 			li.classList.add('dropdown__city');
 			li.textContent = item.name;
