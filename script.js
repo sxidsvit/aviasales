@@ -62,13 +62,22 @@ const showCity = (input, list) => {
 				return 0;
 			})
 
-		filterCityFirstLetters.forEach((item) => {
+
+
+
+		if (filterCityFirstLetters.length === 0) {
 			const li = document.createElement('li');
-			li.classList.add('dropdown__city');
-			li.textContent = item.name;
+			li.classList.add('dropdown__city', 'error');
+			li.textContent = 'Такого города нет'
 			list.append(li);
-		});
-	} else {
+		} else {
+			filterCityFirstLetters.forEach((item) => {
+				const li = document.createElement('li');
+				li.classList.add('dropdown__city');
+				li.textContent = item.name;
+				list.append(li);
+			})
+		};
 		return;
 	}
 };
