@@ -5,7 +5,8 @@ const formSearch = document.querySelector('.form-search'),
 	dropdownCitiesTo = formSearch.querySelector('.dropdown__cities-to'),
 	inputDateDepart = formSearch.querySelector('.input__date-depart'),
 	cheapestTicket = document.getElementById('cheapest-ticket'),
-	otherCheapTickets = document.getElementById('other-cheap-tickets');
+	otherCheapTickets = document.getElementById('other-cheap-tickets'),
+	body = document.querySelector('body');
 // db/cities.json' - локальная БД городов
 
 //онлайн база городов, прокси, ключ АПИ и БД по календарю цен
@@ -205,6 +206,11 @@ dropdownCitiesFrom.addEventListener('click', () => {
 
 dropdownCitiesTo.addEventListener('click', () => {
 	selectCity(event, inputCitiesTo, dropdownCitiesTo);
+});
+
+body.addEventListener('click', () => {
+	dropdownCitiesFrom.innerHTML = '';
+	dropdownCitiesTo.innerHTML = '';
 });
 
 formSearch.addEventListener('submit', (event) => {
