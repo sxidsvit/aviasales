@@ -13,66 +13,63 @@ const CITY_API = 'http://api.travelpayouts.com/data/ru/cities.json',
 	PROXY = 'https://cors-anywhere.herokuapp.com/',
 	API_KEY = '5d2e3c92f5cbb5b20d19b432ed48fb95',
 	// Получение минимальных цен на перелёт для указанных даты вылета и городов вылета и назначения
-	CALENDAR = 'http://min-prices.aviasales.ru/calendar_preload'
+	CALENDAR = 'http://min-prices.aviasales.ru/calendar_preload',
+	MAX_COUNT = 5  // количество карточек самых дешевых билетов
 
 
 let city = [];
 
 // --- функции
-const getData = (url, callback) => {
+const getData = (url, callback, reject = console.error) => {
+	try {
 
-	const request = new XMLHttpRequest();
+		const request = new XMLHttpRequest();
 
-	request.open('GET', url);
+		request.open('GET', url);
 
-	request.addEventListener('readystatechange', () => {
-		if (request.readyState !== 4) return;
+		request.addEventListener('readystatechange', () => {
+			if (request.readyState !== 4) return;
 
-		if (request.status === 200) {
-			callback(request.response);
-		} else {
-			console.error(request.status);
-		}
-	});
+			if (request.status === 200) {
+				callback(request.response);
+			} else {
+				reject(request.status);
+			}
+		});
 
-	request.send();
+		request.send();
+	} catch (e) {
+		console.log(e);
+	}
 }
 
 const showCity = (input, list) => {
 	list.textContent = '';
 
 	if (input.value !== '') {
+
+		cheapestTicket.style.display = 'none'
+		otherCheapTickets.style.display = 'none'
+
 		const filterCity = city.filter((item) => {
 			const fixItem = item.name.toLowerCase();
 			return fixItem.startsWith(input.value.toLowerCase());
 			// return fixItem.includes(input.value.toLowerCase());
 		});
 
-		// мой способ сортировки ( без использования startsWith() )
+		// другой способ сортировки ( без использования startsWith() )
 		// const filterCityFirstLetters = filterCity.filter((item) => {
 		// 	return item.name.slice(0, input.value.length) === input.value
 		// })
 		// console.log('filterCityFirstLetters: ', filterCityFirstLetters);
 
-		const filterCityFirstLetters = filterCity
-
-		filterCityFirstLetters.sort((a, b) => {
-			if (a.name < b.name) {
-				return -1;
-			}
-			if (a.name > b.name) {
-				return 1;
-			}
-			return 0;
-		})
-
-		if (filterCityFirstLetters.length === 0) {
+		if (filterCity.length === 0) {
 			const li = document.createElement('li');
 			li.classList.add('dropdown__city', 'error');
 			li.textContent = 'Такого города нет'
 			list.append(li);
 		} else {
-			filterCityFirstLetters.forEach((item) => {
+			filterCity.forEach((item) => {
 				const li = document.createElement('li');
 				li.classList.add('dropdown__city');
 				li.textContent = item.name;
@@ -116,8 +113,23 @@ const getChanges = (num) => {
 	}
 }
 
+const getLinkAviasales = (data) => {
+	let link = 'https://www.aviasales.ru/search/'
+	link += data.origin
+
+	const date = new Date(data.depart_date)
+	const day = date.getDate()
+	link += day < 10 ? '0' + day : day
+	const month = date.getMonth() + 1
+	link += month < 10 ? '0' + month : month
+
+	link += data.destination
+	link += '1'   // один взрослый билет
+
+	return link
+}
+
 const createCard = (data) => {
-	console.log('data: ', data);
 	const ticket = document.createElement('article')
 	ticket.classList.add('ticket')
 	let deep = ''
@@ -126,7 +138,7 @@ const createCard = (data) => {
 			<h3 class="agent">${data.gate}</h3>
 			<div class="ticket__wrapper">
 				<div class="left-side">
-					<a href="https://www.aviasales.ru/search/SVX2905KGD1" class="button button__buy">Купить
+					<a href="${getLinkAviasales(data)}" target="_blank" class="button button__buy">Купить
 						за ${data.value}₽</a>
 				</div>
 				<div class="right-side">
@@ -159,10 +171,15 @@ const renderCheapDay = (cheapTicket) => {
 	cheapestTicket.insertAdjacentElement('beforeend', ticket)
 }
 
-const renderCheapYear = (cheapTicket) => {
+const renderCheapYear = (cheapTickets) => {
 	otherCheapTickets.style.display = 'block'
 	otherCheapTickets.innerHTML = '<h2>Самые дешевые билеты на другие даты</h2>'
-	cheapTicket.sort((a, b) => a.value - b.value)
+	cheapTickets.sort((a, b) => a.value - b.value)
+
+	for (let i = 0; i < cheapTickets.length && i < MAX_COUNT; i++) {
+		const ticket = createCard(cheapTickets[i])
+		otherCheapTickets.append(ticket)
+	}
 }
 
 const renderCheap = (data, date) => {
@@ -201,15 +218,16 @@ formSearch.addEventListener('submit', (event) => {
 		to: cityToCode,
 		when: inputDateDepart.value
 	}
-	// console.log('formData: ', formData);
 
 	const requestData = CALENDAR +
 		`?depart_date=${formData.when}&origin=${formData.from}&destination=${formData.to}&one_way=true&token=${API_KEY}`;
 
-	// console.log('requestData: ', requestData);
-
 	getData(requestData, response => {
 		renderCheap(response, formData.when)
+	}, (error) => {
+		cheapestTicket.style.display = 'block'
+		cheapestTicket.innerHTML = '<h2 class ="error">В этом направлении нет рейсов</h2>'
+		console.error('Ошибка ', error)
 	})
 })
 
@@ -218,4 +236,15 @@ formSearch.addEventListener('submit', (event) => {
 getData(PROXY + CITY_API, (data) => {
 	// выбираем только те объекты у которых не пустое поле name
 	city = JSON.parse(data).filter(item => item.name);
+
+	city.sort((a, b) => {
+		if (a.name < b.name) {
+			return -1;
+		}
+		if (a.name > b.name) {
+			return 1;
+		}
+		return 0;
+	})
+
 });
